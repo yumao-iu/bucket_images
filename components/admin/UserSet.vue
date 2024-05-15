@@ -24,7 +24,7 @@
       <div class="header">
         <p><em></em><em>编号</em></p>
         <p><em></em><em>账号</em></p>
-        <p><em></em><em>邮箱</em></p>
+        <p><em></em><em>昵称</em></p>
         <p><em></em><em>余额</em></p>
         <p><em></em><em>操作</em></p>
       </div>
@@ -37,7 +37,7 @@
             <em></em><em>{{ v.user }}</em>
           </p>
           <p>
-            <em></em><em>{{ v.mail }}</em>
+            <em></em><em>{{ v.name }}</em>
           </p>
           <p>
             <em></em><em>{{ v.price }}</em>
@@ -61,6 +61,12 @@
                 disabled
                 style="cursor: not-allowed"
               />
+            </p>
+          </div>
+          <div class="item">
+            <p>昵称</p>
+            <p>
+              <input type="text" v-model="show_more.name" />
             </p>
           </div>
           <div class="item">
@@ -139,7 +145,6 @@ let show_mask = ref(0);
 let add_mask = ref(0);
 let search_text = ref("");
 let search_data = reactive([]);
-let search_temp = JSON.parse(JSON.stringify(data));
 let show_more = reactive({});
 let add_user_data = ref({ user: "", pass: "", mail: "" });
 
@@ -161,7 +166,7 @@ let more_user = async (v) => {
   show_more = v;
 };
 let ban_user = async () => {
-  alert("🤡");
+  alert("该功能来不及做了 🤡");
 };
 let save_user = async () => {
   let data = await api.save_user(show_more);

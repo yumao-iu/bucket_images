@@ -11,9 +11,11 @@
       <Transition name="admin_index" mode="out-in">
         <AdminFrontSet v-if="section_index == 0" />
         <AdminFoodSet v-else-if="section_index == 1" />
-        <AdminStaffSet v-else-if="section_index == 2" />
-        <AdminUserSet v-else-if="section_index == 3" />
-        <AdminWebSet v-else-if="section_index == 4" />
+        <AdminTradeSet v-else-if="section_index == 2" />
+        <AdminStaffSet v-else-if="section_index == 3" />
+        <AdminUserSet v-else-if="section_index == 4" />
+        <AdminBusinessSet v-else-if="section_index == 5" />
+        <AdminWebSet v-else-if="section_index == 6" />
       </Transition>
     </main>
     <section>
@@ -50,12 +52,20 @@ let section_obj = reactive([
     name: "菜品管理",
   },
   {
+    icon: "icon-yonghu",
+    name: "订单管理",
+  },
+  {
     icon: "icon-shequ",
     name: "人员管理",
   },
   {
     icon: "icon-yonghu",
     name: "用户管理",
+  },
+  {
+    icon: "icon-yonghu",
+    name: "商家管理",
   },
   {
     icon: "icon-jiekouzhongxin",
@@ -67,18 +77,16 @@ let set_index = (i) => {
   section_index.value = i;
 };
 let go_index = () => {
-  location.href = "/";
+  router.push({ path: "/" });
 };
 
 onMounted(() => {
   let token = localStorage.getItem("admin_token");
-  if (!token) location.href = "/";
+  if (!token) router.push({ path: "/" });
 });
-
-
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
 #pages_admin {
   position: relative;
   background: rgb(246, 248, 246);

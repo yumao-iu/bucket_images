@@ -5,12 +5,4 @@ export default defineNuxtConfig({
     enabled: false,
   },
   modules: ['nuxt-swiper','@pinia/nuxt','@pinia-plugin-persistedstate/nuxt'],
-  // vue:{
-  //   __VUE_PROD_DEVTOOLS__
-  // }
-  // nitro:{
-  //   prerender:{
-  //     ignore:['/images']
-  //   }
-  // }
 })

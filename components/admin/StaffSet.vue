@@ -132,20 +132,14 @@
 </template>
 
 <script setup>
-import { indexStore } from "~/store";
-import { adminStore } from "~/store/admin";
-import { storeToRefs } from "pinia";
 import api from "~/axios/admin";
 
-let { init_data } = storeToRefs(indexStore());
-let { admin_token } = storeToRefs(adminStore());
 let data = ref(await api.get_staff());
 
 let show_mask = ref(0);
 let add_mask = ref(0);
 let search_text = ref("");
 let search_data = reactive([]);
-let search_temp = JSON.parse(JSON.stringify(data));
 let show_more = reactive({});
 let add_staff_data = ref({ tel: "", name: "", sort: "", localtion: "" });
 

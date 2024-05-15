@@ -10,7 +10,7 @@ export let adminStore = defineStore('adminStore', {
         login_out() {
             localStorage.clear()
             this.$reset()
-            location.href = '/'
+            useRouter().push({ path: '/' })
         }
     },
     persist: true,

@@ -25,15 +25,20 @@ if (process.env.NODE_ENV == 'development') dbConfig = {
     password: '123456',
     database: 'bs',
 }
-else dbConfig = {
-    host: '47.236.86.227',
-    user: 'weiyinglin',
-    password: '123456',
-    database: 'bs',
-}
-
-
-
+else
+    dbConfig = {
+        host: '47.236.86.227',
+        user: 'weiyinglin',
+        password: '123456',
+        database: 'bs',
+    }
+    // dbConfig = {
+    //     host: 'mysql.sqlpub.com',
+    //     user: 'hualuo_blog',
+    //     password: '3viRrYKw1jTvkicQ',
+    //     database: 'hualuo_blog',
+    // }
+    
 let db = mysql.createConnection(dbConfig);
 db.query('select 1', (err, r) => { if (err) console.log('数据库配置错误！/server/yumao/config.js'); })
 

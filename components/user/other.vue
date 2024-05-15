@@ -33,8 +33,8 @@
           <i @click="pay(self_price)">生成</i>
         </div>
         <div class="tip">
-          <p>1. 请使用使用支付宝扫码</p>
-          <p>2. 可点击图片二维码刷新</p>
+          <p>1. 请使用使用支付宝扫码🥳</p>
+          <p>2. 单笔充值不能大于1000元😥</p>
         </div>
       </div>
     </div>
@@ -144,27 +144,31 @@ let user_notice = ref(await user_api.get_notice());
 pay_img.value = await qrcode.toDataURL("https://www.gxust.edu.cn/");
 
 let pay = throttle(async (price, index = -1, type = "btn") => {
-  if (type != "btn")
-    if (
-      !/^([0-9]+|[0-9]{1,3}(,[0-9]{3})*)(.[0-9]{1,2})?$/.test(self_price.value)
-    ) {
-      alert("金额格式错误");
-      return 0;
-    }
-  let { data } = await api.pay("pay", { price });
+  // if (
+  //   !/^([0-9]+|[0-9]{1,3}(,[0-9]{3})*)(.[0-9]{1,2})?$/.test(self_price.value) &&
+  //   type == "self"
+  // ) {
+  //   alert("金额格式错误");
+  //   return 0;
+  // }
+  if (parseFloat(self_price.value) > 1000) {
+    alert("单笔充值不能大于1000元😥");
+    return;
+  }
+  let { data } = await user_api.pay("pay", { price });
   let { code, qrCode, outTradeNo } = data;
-  tip_text.value = "二维码生成成功！😋";
-  self_price.value = "";
-  select_price.value = index;
   if (code == "10000") {
     let finish = 0;
+    tip_text.value = "二维码生成成功！😋";
+    self_price.value = "";
+    select_price.value = index;
     pay_img.value = await qrcode.toDataURL(qrCode);
     show_qr.value = 0;
     timer = setInterval(async () => {
       finish = await check_finish(outTradeNo);
       if (finish) pay_success();
     }, 2500);
-  } else alert("系统错误");
+  } else alert("生成错误，金额格式错误或者系统内部错误")
 }, 1000);
 let pay_success = async () => {
   await update_user();
@@ -175,7 +179,10 @@ let pay_success = async () => {
 };
 let check_finish = async (trade) => {
   let flag = 0;
-  let { data } = await api.pay("add_query", { trade, token: user_token.value });
+  let { data } = await user_api.pay("add_query", {
+    trade,
+    token: user_token.value,
+  });
   let { code, tradeStatus } = data;
   if (code == "10000" && tradeStatus == "TRADE_SUCCESS") {
     flag = 1;
@@ -185,6 +192,7 @@ let check_finish = async (trade) => {
 let filter = () => {
   self_price.value = self_price.value.replace(/\s/g, "");
 };
+
 let set_pass = async () => {
   if (pass.value.new_pass !== pass.value.again_pass) alert("两次密码不一样 😅");
   else if (

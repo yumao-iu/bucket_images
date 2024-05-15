@@ -2,7 +2,12 @@
 <template>
   <div id="FrontSet">
     <div class="title">
-      <p v-for="(v, i) in section_obj" :key="i" @click="set_index(i)" :class="section_index==i?'selected_class':''">
+      <p
+        v-for="(v, i) in section_obj"
+        :key="i"
+        @click="set_index(i)"
+        :class="section_index == i ? 'selected_class' : ''"
+      >
         {{ v }}
       </p>
     </div>
@@ -66,6 +71,22 @@
         </div>
         <p @click="sure_other">保存</p>
       </div>
+      <div class="notice_set" v-else-if="section_index == 4">
+        <div class="user_notice">
+          <p>用户公告</p>
+          <div class="content">
+            <textarea v-model="user_notice.content"></textarea>
+          </div>
+          <p @click="sure_notice('user')">保存</p>
+        </div>
+        <div class="business_notice">
+          <p>商家公告</p>
+          <div class="content">
+            <textarea v-model="business_notice.content"></textarea>
+          </div>
+          <p @click="sure_notice('business')">保存</p>
+        </div>
+      </div>
     </Transition>
     <input
       type="file"
@@ -86,7 +107,13 @@ import api from "~/axios/admin";
 
 let { init_data } = storeToRefs(indexStore());
 let section_index = ref(0);
-let section_obj = ref(["轮播设置", "新闻设置", "菜品展示", "其他信息"]);
+let section_obj = ref([
+  "轮播展示",
+  "新闻设置",
+  "菜品展示",
+  "其他信息",
+  "公告设置",
+]);
 
 let swiper = ref(init_data.value.swiper);
 let news = ref(init_data.value.news);
@@ -94,6 +121,9 @@ let food = reactive(init_data.value.food);
 let show_swiper = reactive([]);
 let foodStr = ref("");
 let detail = reactive(init_data.value.detail);
+let user_notice = ref(init_data.value.user_notice);
+let business_notice = ref(init_data.value.business_notice);
+
 let files = reactive({});
 food.map((v, i) => {
   foodStr.value += v.id + ",";
@@ -101,7 +131,7 @@ food.map((v, i) => {
 });
 
 let set_index = (i) => {
-  files = {}
+  files = {};
   section_index.value = i;
 };
 let upload_btn = () => {
@@ -132,17 +162,21 @@ let sure_news = async () => {
   for (let i = 0; i < news.value.length; i++) await api.set_news(news.value[i]);
 };
 let sure_food = async () => {
-   foodStr.value = foodStr.value.replace(/,$/, "");
-   await api.set_food_show(foodStr.value);
+  foodStr.value = foodStr.value.replace(/,$/, "");
+  foodStr.value = foodStr.value.replace(/,,/, ",");
+  await api.set_food_show(foodStr.value);
 };
-let sure_other = async ()=>{
+let sure_other = async () => {
   for (let i = 0; i < detail.length; i++) await api.set_other(detail[i]);
-}
+};
+let sure_notice = async (who) => {
+  if (who == "user") await api.set_user_notice(who, user_notice.value.content);
+  else await api.set_user_notice(who, business_notice.value.content);
+  alert("修改成功！😅");
+};
 let filter_other = () => {
   foodStr.value = foodStr.value.replace(/，|\|/g, ",");
 };
-
-
 </script>
 
 <style lang="less">
@@ -166,15 +200,17 @@ let filter_other = () => {
       color: rgb(113, 110, 126);
       border-bottom: 2px solid transparent;
     }
-    .selected_class{
-      border-bottom: 2px solid rgb(131,205,213);
+    .selected_class {
+      border-bottom: 2px solid rgb(131, 205, 213);
     }
   }
   .swiper_content {
-    width: 95%;
-    margin: 0 auto;
+    width: 45%;
+    // margin: 0 auto;
+    margin-left: 30px;
     display: flex;
     flex-direction: column;
+    // border: 1px solid gray;
     .set_swiper {
       text-align: center;
       width: 90px;
@@ -225,9 +261,8 @@ let filter_other = () => {
       color: white;
       background: linear-gradient(50deg, rgb(67, 185, 197), rgb(158, 214, 220));
     }
-    >p:last-child{
+    > p:last-child {
       width: 60px;
-
     }
     .show_news {
       width: 100%;
@@ -298,7 +333,7 @@ let filter_other = () => {
       color: white;
       background: linear-gradient(50deg, rgb(67, 185, 197), rgb(158, 214, 220));
     }
-    >p:last-child{
+    > p:last-child {
       width: 60px;
     }
     .show_news {
@@ -354,6 +389,7 @@ let filter_other = () => {
       }
     }
   }
+
   .show_food {
     width: 95%;
     height: 80%;
@@ -369,7 +405,7 @@ let filter_other = () => {
       color: white;
       background: linear-gradient(50deg, rgb(67, 185, 197), rgb(158, 214, 220));
     }
-    >p:last-child{
+    > p:last-child {
       width: 60px;
     }
     > div {
@@ -395,6 +431,36 @@ let filter_other = () => {
         color: rgb(74, 73, 73);
         cursor: pointer;
       }
+    }
+  }
+  .notice_set {
+    width: 95%;
+    height: 80%;
+    // border: 1px solid gray;
+    margin: 0 auto;
+    display: flex;
+    > div {
+      margin-right: 80px;
+    }
+    p {
+      text-align: center;
+      width: 90px;
+      padding: 7px 3px;
+      box-shadow: 0 0 1px 2px rgba(67, 185, 197, 0.1);
+      margin-bottom: 20px;
+      cursor: pointer;
+      border-radius: 1.5px;
+      color: white;
+      background: linear-gradient(50deg, rgb(67, 185, 197), rgb(158, 214, 220));
+    }
+    textarea {
+      resize: none;
+      width: 350px;
+      height: 300px;
+      border: 1px solid rgb(239, 233, 233);
+      padding: 12px 10px;
+      font-size: 18px;
+      margin-bottom: 10px;
     }
   }
 }

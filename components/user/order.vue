@@ -14,18 +14,22 @@
         </p>
       </div>
       <div class="right">
-        <!-- <i>添加</i> -->
+        <i class="waited" @click="select_data(0)">等待评价</i>
+        <i class="successed" @click="select_data(1)">已经评价</i>
+        <i class="failed" @click="select_data(-1)">已经删除</i>
+        <i class="" @click="select_data(200)">取消检索</i>
       </div>
     </div>
     <div class="content">
       <div class="title">
-        <em class="title_01">编号</em>
-        <em class="title_02">食物</em>
-        <em class="title_03">位置</em>
-        <em class="title_04">时间</em>
-        <em class="title_05">价格</em>
-        <em class="title_07">方式</em>
-        <em class="title_06">操作</em>
+        <em class="tag_01">编号</em>
+        <em class="tag_02">食物</em>
+        <em class="tag_03">位置</em>
+        <em class="tag_04">时间</em>
+        <em class="tag_05">价格</em>
+        <em class="tag_06">方式</em>
+        <em class="tag_07">操作</em>
+        <em class="tag_08">状态</em>
       </div>
       <div class="main">
         <div :class="'order_' + v.id" v-for="(v, i) in data" :key="i">
@@ -44,14 +48,18 @@
           <p class="tag_05">
             <i>{{ v.food_price }}</i>
           </p>
-          <p class="tag_07">
+          <p class="tag_06">
             <i>{{ v.method }}</i>
           </p>
-          <p class="tag_06"><i>更多</i></p>
+          <p class="tag_07" @click="show_estimate(v)">
+            <i>{{ v.estimate_text }}</i>
+          </p>
+          <p class="tag_08" @click="show_estimate(v)">
+            <i :class="v.status=='1'?'successed':'failed'">{{ v.status_text }}</i>
+          </p>
         </div>
       </div>
     </div>
-    <!-- <div class="footer"></div> -->
   </div>
 </template>
 
@@ -66,11 +74,10 @@ import user_api from "~/axios/user";
 let { debounce } = _;
 
 let { init_data } = storeToRefs(indexStore());
-let { update_data, login_out } = userStore();
+let { update_data, login_out, show_estimate } = userStore();
 let { user_data, user_token } = storeToRefs(userStore());
 let { admin_data, admin_token } = storeToRefs(adminStore());
 let data = ref(await user_api.get_order());
-let temp_data = JSON.parse(JSON.stringify(data.value));
 let search_text = ref("");
 
 let search_trade = async () => {
@@ -83,6 +90,10 @@ let search_cancel = async () => {
   let search_data = await user_api.search_trade("");
   data.value = search_data;
   search_text.value = "";
+};
+
+let select_data = async (index) => {
+  data.value = await user_api.get_order(index);
 };
 </script>
 
@@ -111,8 +122,11 @@ let search_cancel = async () => {
         height: 50%;
         border-radius: 2px;
         width: 250px;
-        border: 1px solid rgb(229, 222, 222);
+        border: 1px solid rgb(238, 232, 232);
         transition: all 0.5s;
+        &:hover {
+          border: 1px solid rgb(103, 164, 239);
+        }
         input {
           width: 70%;
           font-size: 18px;
@@ -128,10 +142,10 @@ let search_cancel = async () => {
         }
         .icon-sousuo {
           margin-right: 5px;
-          font-size: 16px!important;
+          font-size: 16px !important;
         }
-        .icon-dacha{
-          font-size: 16px!important;
+        .icon-dacha {
+          font-size: 16px !important;
         }
       }
     }
@@ -139,11 +153,11 @@ let search_cancel = async () => {
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      //   border: 1px solid red;
+
       i {
-        color: rgb(48, 46, 46);
         cursor: pointer;
         transition: all 0.5s;
+        margin: 0 10px;
       }
     }
   }
@@ -159,24 +173,7 @@ let search_cancel = async () => {
       width: 100%;
       height: 40px;
       border-bottom: 1px solid rgba(242, 236, 236, 0.9);
-      .title_01 {
-        width: 8%;
-      }
-      .title_02 {
-        width: 20%;
-      }
-      .title_03 {
-        width: 15%;
-      }
-      .title_04 {
-        width: 12%;
-      }
-      .title_05 {
-        width: 8%;
-      }
-      .title_07 {
-        width: 8%;
-      }
+
       em {
         margin-right: 20px;
         line-height: 40px;
@@ -199,24 +196,6 @@ let search_cancel = async () => {
         &:hover {
           background: rgb(250, 250, 250);
         }
-        .tag_01 {
-          width: 8%;
-        }
-        .tag_02 {
-          width: 20%;
-        }
-        .tag_03 {
-          width: 15%;
-        }
-        .tag_04 {
-          width: 12%;
-        }
-        .tag_05 {
-          width: 8%;
-        }
-        .tag_07 {
-          width: 8%;
-        }
 
         > p {
           margin-right: 20px;
@@ -228,7 +207,7 @@ let search_cancel = async () => {
             text-overflow: ellipsis;
           }
         }
-        > p:last-child {
+        > p:nth-last-of-type(2) {
           i {
             transition: all 0.2s;
             margin-right: 20px;
@@ -240,6 +219,39 @@ let search_cancel = async () => {
         }
       }
     }
+    .tag_01 {
+      width: 6%;
+    }
+    .tag_02 {
+      width: 10%;
+    }
+    .tag_03 {
+      width: 10%;
+    }
+    .tag_04 {
+      width: 15%;
+    }
+    .tag_05 {
+      width: 6%;
+    }
+    .tag_06 {
+      width: 8%;
+    }
+    .tag_07 {
+      width: 8%;
+    }
+    .tag_08 {
+      width: 8%;
+    }
+  }
+  .waited {
+    color: rgb(122, 175, 244);
+  }
+  .successed {
+    color: green;
+  }
+  .failed {
+    color: red;
   }
 }
 </style>

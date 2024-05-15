@@ -27,8 +27,34 @@
         <UserOrder v-if="click_index == 0" />
         <UserOther v-else-if="click_index == 1" />
         <UserMoney v-else-if="click_index == 2" />
+        <UserLog v-else-if="click_index == 3" />
       </transition>
     </main>
+    <Transition name="show_detail" tip="estimate" mode="out-in">
+      <div id="show_estimate" v-show="show_estimate_index">
+        <div class="back" @click="show_estimate"></div>
+        <div class="content">
+          <p class="title">菜品评价</p>
+          <div class="main">
+            <textarea
+              v-model="current_edit_food.estimate_content"
+              v-if="estimate_status"
+              disabled
+            ></textarea>
+            <!-- 已经发送 -->
+            <textarea v-model="v_model_estimate_text" v-else></textarea>
+            <!-- 等待发送 -->
+          </div>
+          <div class="bottom">
+            <em @click="send_estimate" v-if="!estimate_status">发送评价</em>
+            <em class="del" v-else @click="estimate_delete">删除评价</em>
+          </div>
+          <span class="cancel" @click="show_estimate"
+            ><i class="yumao icon-dacha"></i
+          ></span>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -36,10 +62,20 @@
 import { indexStore } from "~/store";
 import { userStore } from "~/store/user";
 import { storeToRefs } from "pinia";
+import api_user from "~/axios/user";
 
-let { login_out, test, update_user } = userStore();
-let { user_data, user_token } = storeToRefs(userStore());
+let { login_out, update_user, show_estimate } = userStore();
+let {
+  user_data,
+  user_token,
+  show_estimate_index,
+  v_model_estimate_text,
+  current_edit_food,
+  estimate_status,
+} = storeToRefs(userStore());
 let click_index = ref(0);
+let router = useRouter()
+
 let navigation_select = ref([
   {
     icon: "icon-xuniji",
@@ -50,12 +86,35 @@ let navigation_select = ref([
     text: "信息",
   },
   {
-    icon: "icon-wenjian",
+    icon: "icon-yundong",
     text: "账单",
+  },
+  {
+    icon: "icon-wenjian",
+    text: "日志",
   },
 ]);
 let go_home = () => {
-  location.href = "/";
+  router.push({path:'/'})
+  // location.href = "/";
+};
+let send_estimate = async () => {
+  if (v_model_estimate_text.value.replace(/\s+/, "") == "") return;
+  let { code, message } = await api_user.send_estimate(
+    v_model_estimate_text.value,
+    current_edit_food.value
+  );
+  if (code == 200) {
+    show_estimate_index.value = false;
+    alert("发送成功！🥵");
+  } else if (code == 500) alert("发送失败！你已经发送过了 🤡");
+};
+let estimate_delete = async () => {
+  if (confirm("注意：删除后不能再进行评价操作🤯")) {
+    let data = await api_user.estimate_delete(current_edit_food.value);
+    show_estimate_index.value = false;
+    alert('删除成功！🤯')
+  }
 };
 update_user();
 </script>
@@ -156,14 +215,110 @@ update_user();
     height: 500px;
     margin: 0 auto;
     i[class^="yumao"] {
-        font-size: 22px;
-        color: rgb(110, 101, 101);
-      }
+      font-size: 22px;
+      color: rgb(110, 101, 101);
+    }
     > div {
       border-radius: 2px;
       width: 100%;
       height: inherit;
     }
+  }
+  #show_estimate {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    z-index: 4;
+    .back {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(181, 174, 174, 0.94);
+    }
+    .content {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 450px;
+      background: white;
+      border-radius: 1px;
+      p.title {
+        margin-top: 30px;
+        margin-bottom: 30px;
+        font-size: 20px;
+        text-align: center;
+      }
+      .main {
+        width: 80%;
+        overflow: auto;
+        margin-bottom: 30px;
+        max-height: 500px;
+        display: flex;
+        textarea {
+          resize: none;
+          transition: all 0.5s;
+          width: 80%;
+          height: 100px;
+          border: 1px solid rgb(192, 185, 185);
+          margin: 0 auto;
+          border-radius: 1px;
+          padding: 10px 10px;
+          font-size: 20px;
+        }
+      }
+      .bottom {
+        display: flex;
+        justify-content: flex-end;
+        width: 70%;
+        margin-bottom: 20px;
+        em {
+          cursor: pointer;
+          font-size: 14px;
+          margin-left: 10px;
+        }
+        em.del {
+          color: red;
+        }
+      }
+      .cancel {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 25px;
+        height: 25px;
+        transition: all 0.4s;
+        cursor: pointer;
+        background: white;
+        box-shadow: 0 0 1px 1px rgba(53, 52, 52, 0.1);
+        border-radius: 1px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        &:hover {
+          transform: translate(-5px, 5px);
+        }
+        i {
+          font-size: 19px;
+          color: rgb(55, 181, 193);
+        }
+      }
+    }
+  }
+  .show_detail-enter-active,
+  .show_detail-leave-active {
+    transition: all 0.2s;
+  }
+  .show_detail-enter-from,
+  .show_detail-leave-to {
+    opacity: 0;
+    filter: blur(1px);
   }
   .user_index-enter-active,
   .user_index-leave-active {

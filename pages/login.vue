@@ -64,10 +64,11 @@
           </div>
         </div>
         <div class="other">
-          <em @click="user_login">用户登录</em>
-          <em @click="user_reg">用户注册</em>
-          <em @click="admin_login">管理员登录</em>
-          <em @click="user_find">用户找回密码</em>
+          <em @click="select_fn(1,'用户登录')">用户登录</em>
+          <em @click="select_fn(2,'用户注册')">用户注册</em>
+          <em @click="select_fn(3,'管理员登录')">管理员登录</em>
+          <em @click="select_fn(5,'商家登录')">商家登录</em>
+          <em @click="select_fn(4,'用户找回密码')">用户找回密码</em>
         </div>
         <p class="login_btn" @click="send">确 定</p>
       </div>
@@ -76,30 +77,28 @@
 </template>
 
 <script setup>
-import { indexStore } from "~/store";
 import { userStore } from "~/store/user";
 import { adminStore } from "~/store/admin";
+import { businessStore } from "~/store/business";
 import { storeToRefs } from "pinia";
 import _ from "lodash";
 import api from "~/axios";
 
-let { debounce } = _;
 let { admin_token, admin_data } = storeToRefs(adminStore());
 let { user_token, user_data } = storeToRefs(userStore());
-let cookie = useCookie("admin_token", { maxAge: 360 });
+let { data_business, token_business } = storeToRefs(businessStore());
 
+let router = useRouter();
 let current_function = ref(1);
 let who_title = ref("用户登录");
 let inp_type = ref("password");
 let show_pass = ref("icon-icon_line_eye");
-let account = ref({ user: null, pass: null, mail: null });
+let account = ref({ user: "", pass: "", mail: "" });
 
-let clear_account = () => {
+let select_fn = (index,title) => {
   for (let key in account.value) account.value[key] = "";
-};
-let filter_white = () => {
-  for (let key in account.value)
-    account.value[key] = account.value[key].replace(/\s+/g, "");
+  current_function.value = index;
+  who_title.value = title;
 };
 let set_eye = () => {
   if (show_pass.value == "icon-icon_line_eye") {
@@ -110,26 +109,6 @@ let set_eye = () => {
     inp_type.value = "password";
   }
 };
-let user_login = () => {
-  clear_account();
-  current_function.value = 1;
-  who_title.value = "用户登录";
-};
-let user_reg = () => {
-  clear_account();
-  current_function.value = 2;
-  who_title.value = "用户注册";
-};
-let admin_login = () => {
-  clear_account();
-  current_function.value = 3;
-  who_title.value = "管理员登录";
-};
-let user_find = () => {
-  clear_account();
-  current_function.value = 4;
-  who_title.value = "用户找回密码";
-};
 let send = async () => {
   if (current_function.value == 3) {
     //管理员登录
@@ -137,9 +116,8 @@ let send = async () => {
     if (data.code) {
       admin_token.value = data.token;
       admin_data.value = data.data;
-      cookie.value = data.token;
       localStorage.setItem("admin_token", data.token);
-      location.href = "/admin";
+      router.push({ path: "/admin" });
     } else alert("账号或者密码错误！🤡");
   } else if (current_function.value == 1) {
     //用户登录
@@ -148,7 +126,7 @@ let send = async () => {
       user_token.value = token;
       user_data.value = data;
       localStorage.setItem("user_token", token);
-      location.href = "/user";
+      router.push({ path: "/user" });
     } else alert("账号或者密码错误！🤡");
   } else if (current_function.value == 2) {
     //用户注册
@@ -160,7 +138,11 @@ let send = async () => {
       alert("至少六位数 🤡");
       return 0;
     }
-    if(!/^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})$/.test(account.value.mail)){
+    if (
+      !/^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,6})$/.test(
+        account.value.mail
+      )
+    ) {
       alert("邮箱格式好像不对 🤡");
       return 0;
     }
@@ -170,24 +152,29 @@ let send = async () => {
       user_data.value = data;
       localStorage.setItem("user_token", token);
       location.href = "/user";
-    } else if (code == -1) {
-      alert("用户名已存在");
-    } else if (code == -2) {
-      alert("邮箱已存在");
-    }
+    } else if (code == -1) alert("用户名已存在");
+    else if (code == -2) alert("邮箱已存在");
   } else if (current_function.value == 4) {
     //用户找回
     let { code } = await api.user_find(account.value);
     if (code) {
       alert("邮箱已经发送！");
-      clear_account();
+      for (let key in account.value) account.value[key] = "";
     } else alert("用户名或者邮箱不存在！");
+  } else if (current_function.value == 5) {
+    //商家登录
+    let { data, token, code } = await api.business_login(account.value);
+    if (code) {
+      data_business.value = data;
+      token_business.value = token;
+      router.push({ path: "/business" });
+    } else alert("账号或密码错误🤡");
   }
 };
-onMounted(() => {
-  // if(localStorage.getItem('admin_token')) location.href='/admin'
-  // if(localStorage.getItem('user_token')) location.href='/user'
-});
+let filter_white = () => {
+  for (let key in account.value)
+    account.value[key] = account.value[key].replace(/\s+/g, "");
+};
 </script>
 
 <style lang="less">
@@ -201,7 +188,7 @@ onMounted(() => {
     align-items: flex-start;
     justify-content: space-between;
     .left {
-      width: 60%;
+      width: 58%;
       img {
         filter: blur(0.2px);
         border-radius: 3px;
@@ -212,7 +199,7 @@ onMounted(() => {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 38%;
+      width: 40%;
       box-shadow: 0 0 1px 3px rgba(241, 238, 238, 0.4);
       > .title {
         margin-top: 30px;
@@ -369,7 +356,7 @@ onMounted(() => {
       .other {
         display: flex;
         justify-content: flex-end;
-        margin-bottom: 30px;
+        margin-bottom: 28px;
         em {
           font-size: 14px;
           margin-left: 15px;
@@ -388,7 +375,7 @@ onMounted(() => {
         color: white;
         background: rgb(59, 182, 193);
         border-radius: 3px;
-        margin-bottom: 19px;
+        margin-bottom: 10px;
         opacity: 0.9;
         transition: all 0.5s;
         &:hover {

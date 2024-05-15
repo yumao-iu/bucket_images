@@ -29,7 +29,7 @@ export default {
     async search_order(uid, text) {
         return new Promise((solve, reject) => {
             //危险操作
-            db.execute(`select * from trade where uid = ${uid} and food_name like '%${text}%' or food_name like '%${text}%' or food_price like '%${text}%' or food_localtion like '%${text}%' or time like '%${text}%' order by id desc`, (err, result) => {
+            db.execute(`select * from t_trade where uid = ${uid} and food_name like '%${text}%' or food_name like '%${text}%' or food_price like '%${text}%' or food_localtion like '%${text}%' or time like '%${text}%' order by id desc`, (err, result) => {
                 if (result.length) {
                     result.forEach((v) => {
                         v.method = v.out_trade_on == "balance_pay" ? "余额购买" : "扫码购买";

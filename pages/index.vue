@@ -9,13 +9,15 @@
         <div id="head_right">
           <div class="top">
             <em>
-              <i @click="login_out"
-                >{{ user_data.value ? "未登录" : user_data.price }} 调试清除</i
+              <i @click="clear_login">调试清除</i>
+              <i @click="go_where('admin')" v-if="admin_token">管理后台</i>
+              <i @click="go_where('business')" v-if="token_business"
+                >商家页面</i
               >
-              <i @click="go_user">用户页面</i>
-              <i @click="go_school">学校官网</i
-              ><i @click="show_search = true">搜索菜品</i
-              ><i @click="go_login">快速登录</i></em
+              <i @click="go_where('user')" v-if="user_token">用户页面</i>
+              <i @click="go_where('school')">学校官网</i
+              ><i @click="go_where('search_food')">搜索菜品</i
+              ><i @click="go_where('login')">快速登录</i></em
             >
           </div>
           <div class="bottom">
@@ -60,7 +62,7 @@
               :class="'new_' + v.id"
               v-for="(v, i) in news"
               :key="i"
-              @click="go_news(v.link)"
+              @click="go_where('news', v.link)"
             >
               <i class="yumao icon-youjiantou"></i><i>{{ v.title }}</i>
             </div>
@@ -117,8 +119,11 @@
             <p>
               <em>菜品介绍:</em><em> {{ current_food.introduce }}</em>
             </p>
-            <em
-              ><i class="code_btn" @click="code_buy">扫码购买</i
+            <em>
+              <i class="estimate_btn" @click="index_show_estimate">{{
+                pre_estimate_num
+              }}</i>
+              <i class="code_btn" @click="code_buy">扫码购买</i
               ><i class="balance_btn" @click="balance_buy">余额购买</i></em
             >
             <span class="cancel" @click="show_food = false"
@@ -135,7 +140,7 @@
           <div class="content">
             <p class="search">
               <input
-              id="search_inp"
+                id="search_inp"
                 type="text"
                 maxlength="20"
                 placeholder="搜索点什么吧🤯"
@@ -164,10 +169,60 @@
     </Transition>
     <Transition name="show_detail" tip="code" mode="out-in">
       <div id="show_code" v-show="show_code">
-        <div class="back" @click="show_code = false"></div>
+        <div class="back" @click="cancel_code"></div>
         <div class="content">
-          <p><img :src="qrcode_img" /></p>
-          <span class="cancel" @click="show_code = false"
+          <Transition name="code_success_1" mode="out-in">
+            <p class="code_success" v-show="code_success">
+              <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+                <path
+                  :class="code_success ? 'add_animation' : ''"
+                  d="M10 24L20 34L40 14"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </p>
+          </Transition>
+          <Transition name="code_success_2" mode="out-in">
+            <p class="code_img" v-show="!code_success">
+              <img :src="qrcode_img" />
+            </p>
+          </Transition>
+          <span class="cancel" @click="cancel_code"
+            ><i class="yumao icon-dacha"></i
+          ></span>
+        </div>
+      </div>
+    </Transition>
+    <Transition name="show_detail" tip="estimate" mode="out-in">
+      <div id="show_estimate" v-show="show_estimate">
+        <div class="back" @click="show_estimate = false"></div>
+        <div class="content">
+          <p class="title">菜品评价</p>
+          <div class="main">
+            <div
+              :id="'estimate_' + v.id"
+              v-for="(v, i) in list_estimate"
+              :key="i"
+            >
+              <div class="left">
+                <p><img src="/images/tang_02.jpg" /></p>
+              </div>
+              <div class="right">
+                <p class="top">
+                  <em class="name">{{ v.name }}--永雏塔菲</em
+                  ><em class="time">{{ v.time }} {{v.ip}}</em>
+                </p>
+                <pre
+                  >{{
+                    v.estimate_content
+                  }}<br/>太好吃喵，太好吃喵😋🤔🥰</pre
+                >
+              </div>
+            </div>
+          </div>
+          <span class="cancel" @click="show_estimate = false"
             ><i class="yumao icon-dacha"></i
           ></span>
         </div>
@@ -177,53 +232,62 @@
 </template>
 
 <script setup>
+import _ from "lodash";
+import qrcode from "qrcode";
+import api_index from "~/axios";
+import api_user from "~/axios/user";
+import { storeToRefs } from "pinia";
 import { indexStore } from "~/store";
 import { userStore } from "~/store/user";
 import { adminStore } from "~/store/admin";
-import { storeToRefs } from "pinia";
-import qrcode from "qrcode";
-import _ from "lodash";
-import index_api from "~/axios";
-import user_api from "~/axios/user";
-import user from "~/axios/user";
-let { debounce } = _;
+import { businessStore } from "~/store/business";
 
-let { init_data } = storeToRefs(indexStore());
+let { debounce } = _;
+let router = useRouter();
 let { update_user, login_out } = userStore();
+let { init_data } = storeToRefs(indexStore());
+let { token_business } = storeToRefs(businessStore());
 let { user_data, user_token } = storeToRefs(userStore());
 let { admin_data, admin_token } = storeToRefs(adminStore());
-let { food, swiper, detail, news } = init_data.value;
+let { swiper, food, detail, news } = init_data.value;
+
 let show_search = ref(false);
 let show_food = ref(false);
 let show_code = ref(false);
-let current_food = ref({});
-let search_result = reactive({});
-let search_text = ref(null);
+let show_estimate = ref(false);
+let current_food = ref("");
+let search_result = ref("");
+let search_text = ref('');
 let qrcode_img = ref("/images/qrcode.png");
 let timer = null;
+let list_estimate = ref("");
+let pre_estimate_num = ref("");
+let code_success = ref(false);
 
-let go_user = () => {
-  location.href = "/user";
+let go_where = (where, v = 200) => {
+  if (where == "user") router.push({ path: "/user" });
+  else if (where == "business") router.push({ path: "/business" });
+  else if (where == "admin") router.push({ path: "/admin" });
+  else if (where == "school") window.open("https://www.gxust.edu.cn/");
+  else if (where == "login") router.push({ path: "/login" });
+  else if (where == "news") window.open(v);
+  else if (where == "search_food") show_search.value = true;
 };
-let go_school = () => {
-  window.open("https://www.gxust.edu.cn/");
-};
-let go_login = async () => {
-  await navigateTo("/login");
-};
-let go_news = (v) => {
-  window.open(v);
-};
-let go_food = (v) => {
+let go_food = async (v) => {
   show_food.value = true;
-  current_food = v;
+  current_food.value = v;
+  list_estimate.value = await api_index.get_list_estimate(v.id);
+  if (list_estimate.value.length)
+    pre_estimate_num.value = "查看评价(" + list_estimate.value.length + ")";
+  else pre_estimate_num.value = "无评价！";
 };
 let cancel_search = () => {
   show_search.value = false;
-  search_result = {};
+  search_result.value = "";
 };
-let filter_digit = () => {
-  search_text.value = search_text.value.replace(/\s+/g, "");
+let cancel_code = () => {
+  show_code.value = false;
+  code_success.value = false;
 };
 let code_buy = async () => {
   if (!user_data.value) {
@@ -231,7 +295,7 @@ let code_buy = async () => {
     return;
   }
   show_code.value = true;
-  let { data } = await index_api.pay("pay", current_food);
+  let { data } = await api_user.pay("pay", current_food.value);
   let { qrCode, outTradeNo } = data;
   let finish = 0;
   qrcode_img.value = await qrcode.toDataURL(qrCode);
@@ -240,41 +304,55 @@ let code_buy = async () => {
     if (finish) code_buy_success({ outTradeNo });
   }, 2000);
 };
-let code_buy_success = async () => {
-  clearInterval(timer);
-  alert("支付成功！ 😅");
-  show_code.value = false;
-};
 let balance_buy = async () => {
   if (!user_data.value) {
     alert("请先登录 🤡");
     return;
   }
-  if (user_data.value.price < current_food.price) {
+  if (user_data.value.price < current_food.value.price) {
     alert("余额不足 🤡,剩余余额:" + user_data.value.price);
     return;
   }
-  let { data, token } = await user_api.balance_pay(current_food.id);
+  await api_user.balance_pay(current_food.value.id);
   alert("购买成功！😅");
   show_food.value = false;
   update_user();
 };
+let code_buy_success = async () => {
+  clearInterval(timer);
+  code_success.value = true;
+};
 let check_finish = async (trade) => {
-  current_food.uid = user_data.value.id;
   let flag = 0;
-  let { data } = await index_api.pay("query", { trade, info: current_food });
+  current_food.value.uid = user_data.value.id;
+  let { data } = await api_user.pay("query", {
+    trade,
+    info: current_food.value,
+  });
   let { code, tradeStatus } = data;
   if (code == "10000" && tradeStatus == "TRADE_SUCCESS") flag = 1;
   return flag;
 };
 let search_food = debounce(async () => {
   if (!search_text.value) return 0;
-  let data = reactive(await index_api.search_food(search_text.value));
+  let data = await api_index.search_food(search_text.value);
   if (data.length) {
-    search_result = data;
+    search_result.value = data;
     search_text.value = null;
   } else alert("无搜索结果");
 }, 500);
+let index_show_estimate = async () => {
+  if (list_estimate.value.length) show_estimate.value = true;
+};
+let filter_digit = () => {
+  search_text.value = search_text.value.replace(/\s+/g, "");
+};
+let clear_login = () => {
+  userStore().login_out();
+  adminStore().login_out();
+  businessStore().login_out();
+  location.href = "/";
+};
 </script>
 
 <style lang='less'>
@@ -794,14 +872,146 @@ let search_food = debounce(async () => {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 250px;
+      width: 220px;
+      height: 220px;
       background: white;
       border-radius: 1px;
-      img {
-        width: 200px;
-        height: 200px;
-        margin-top: 40px;
+      border-radius: 2px;
+      p.code_img {
+        position: absolute;
+        width: 80%;
+        height: 80%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        img {
+          width: 200px;
+          height: 200px;
+          margin-top: 40px;
+          margin-bottom: 30px;
+        }
+      }
+      p.code_success {
+        position: absolute;
+        width: 80%;
+        height: 80%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        svg {
+          path {
+            stroke-width: 2;
+            stroke: rgb(15, 227, 15);
+            stroke-dasharray: 45;
+            stroke-dashoffset: 45;
+            animation: path 1s ease 1 forwards;
+          }
+        }
+      }
+      .add_animation {
+        animation: path 0.8s linear 1 forwards;
+        @keyframes path {
+          0% {
+            stroke-dashoffset: 45;
+          }
+
+          100% {
+            stroke-dashoffset: 0;
+          }
+        }
+      }
+      .cancel {
+        position: absolute;
+        top: -8px;
+        right: -6px;
+        width: 25px;
+        height: 25px;
+        transition: all 0.4s;
+        cursor: pointer;
+        background: white;
+        box-shadow: 0 0 1px 1px rgba(53, 52, 52, 0.1);
+        border-radius: 1px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        &:hover {
+          transform: translate(-5px, 5px);
+        }
+        i {
+          font-size: 19px;
+          color: rgb(55, 181, 193);
+        }
+      }
+    }
+  }
+  #show_estimate {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    z-index: 4;
+    .back {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(181, 174, 174, 0.94);
+    }
+    .content {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 470px;
+      background: white;
+      border-radius: 1px;
+      p.title {
+        margin-top: 30px;
         margin-bottom: 30px;
+        font-size: 20px;
+        border-bottom: 1px solid rgb(239, 230, 230);
+      }
+      .main {
+        width: 80%;
+        overflow: auto;
+        margin-bottom: 30px;
+        max-height: 500px;
+        img {
+          width: 45px;
+          height: 45px;
+          border-radius: 2px;
+        }
+        div[id^="estimate_"] {
+          display: flex;
+          margin-bottom: 40px;
+          .left {
+            margin-right: 20px;
+          }
+          .right {
+            .top {
+              margin-bottom: 8px;
+            }
+            .name {
+              font-size: 14px;
+              margin-right: 15px;
+            }
+            .time {
+              font-size: 15px;
+              color: rgb(160, 155, 155);
+            }
+            pre {
+              white-space: pre-wrap;
+              font-size: 15px;
+            }
+          }
+        }
+        div[id^="estimate_"]:nth-last-of-type(1) {
+          margin-bottom: 0;
+        }
       }
       .cancel {
         position: absolute;
@@ -828,11 +1038,20 @@ let search_food = debounce(async () => {
     }
   }
   .show_detail-enter-active,
-  .show_detail-leave-active {
+  .show_detail-leave-active,
+  .code_success_1-enter-active,
+  .code_success_1-leave-active,
+  .code_success_2-enter-active,
+  .code_success_2-leave-active {
     transition: all 0.2s;
   }
+
   .show_detail-enter-from,
-  .show_detail-leave-to {
+  .show_detail-leave-to,
+  .code_success_1-enter-from,
+  .code_success_1-leave-to,
+  .code_success_2-enter-from,
+  .code_success_2-leave-to {
     opacity: 0;
     filter: blur(1px);
   }

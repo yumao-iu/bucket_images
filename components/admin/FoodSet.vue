@@ -17,7 +17,7 @@
         </p>
       </div>
       <div class="right">
-        <p class="add_food" @click="add_food">添加</p>
+        <p class="add_food" @click="add_mask = 1">添加</p>
       </div>
     </div>
     <div class="content">
@@ -49,6 +49,7 @@
       </div>
     </div>
     <Transition name="show_mask" mode="out-in">
+      <!--编辑 -->
       <div id="show_mask" v-show="show_mask">
         <div class="back" @click="show_mask = 0"></div>
         <div class="content">
@@ -92,7 +93,7 @@
               </p>
             </div>
             <div class="first_item">
-              <p>供应</p>
+              <p>商家</p>
               <p>
                 <input type="text" v-model="show_more.localtion" />
               </p>
@@ -117,7 +118,9 @@
         </div>
       </div>
     </Transition>
+    
     <Transition name="add_mask" mode="out-in">
+      <!-- 添加 -->
       <div id="add_mask" v-show="add_mask">
         <div class="back" @click="add_mask = 0"></div>
         <div class="content">
@@ -146,7 +149,7 @@
           </div>
           <div class="double_item">
             <div class="first_item">
-              <p>供应</p>
+              <p>商家</p>
               <p>
                 <input type="text" v-model="add_food_data.localtion" />
               </p>
@@ -175,14 +178,9 @@
 </template>
 
 <script setup>
-import { indexStore } from "~/store";
-import { adminStore } from "~/store/admin";
-import { storeToRefs } from "pinia";
 import _ from "lodash";
 import api from "~/axios/admin";
 
-let { init_data } = storeToRefs(indexStore());
-let { admin_token } = storeToRefs(adminStore());
 let data = ref(await api.get_food());
 let show_mask = ref(0);
 let add_mask = ref(0);
@@ -241,9 +239,6 @@ let delete_food = async () => {
     data.value = data.value.filter((v) => v.id != show_more.id);
   }
 };
-let add_food = async () => {
-  add_mask.value = 1;
-};
 let click_img_02 = async () => {
   document.querySelector("#files_02").click();
 };
@@ -257,7 +252,7 @@ let sure_add_food = async () => {
   for (let i = 0; i < files_02.length; i++)
     form_data.append("files", files_02[i]);
   form_data.append("data", JSON.stringify(add_food_data.value));
-  let data = api.add_food(form_data);
+  api.add_food(form_data);
   alert("添加成功");
   add_mask.value = 0;
 };
